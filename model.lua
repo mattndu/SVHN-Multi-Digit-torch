@@ -29,9 +29,9 @@ cmd:option('-test', true, 'test the model')
 cmd:text()
 opt = cmd:parse(arg or {})
 
-local lengthClasses = 7
+local lengthClasses = 10
 local maxDigits = lengthClasses - 2 -- class 7 is "> maxDigits"
-local digitClasses = 10
+local digitClasses = 36
 
 local function convLayer(nInput, nOutput, stride)
   local kW = 5
@@ -52,6 +52,7 @@ local function convLayer(nInput, nOutput, stride)
 end
 
 --[[EXTRACTOR - extracts a feature vector H ]]--
+
 extractor = nn.Sequential()
 extractor:add(convLayer(1, 48, 2))
 extractor:add(convLayer(48, 64, 1))
@@ -61,8 +62,8 @@ extractor:add(convLayer(160, 192, 2))
 extractor:add(convLayer(192, 192, 1))
 extractor:add(convLayer(192, 192, 2))
 extractor:add(convLayer(192, 192, 1))
-extractor:add(nn.View(192*7*7):setNumInputDims(3))
-extractor:add(nn.Linear(192*7*7, 3072))
+extractor:add(nn.View(192*12*9):setNumInputDims(3))
+extractor:add(nn.Linear(192*12*9, 3072))
 if opt.transfer == 'elu' then
   extractor:add(nn.ELU())
 elseif opt.transfer == 'relu' then
@@ -154,7 +155,7 @@ local function train()
   model:training() -- for dropout
   model:zeroGradParameters()
 	
-  local confusion = optim.ConfusionMatrix(10)
+  local confusion = optim.ConfusionMatrix(digitClasses)
   
   shuffle = torch.randperm(trainSize)
   for t = 1, trainSize - opt.batchSize, opt.batchSize do
@@ -199,12 +200,12 @@ local function train()
       if opt.type == 'cuda' then
         gradInput[1] = torch.Tensor(opt.batchSize, lengthClasses):zero():cuda()
         for i = 1,maxDigits do
-          gradInput[i+1] = torch.Tensor(opt.batchSize, 10):zero():cuda()
+          gradInput[i+1] = torch.Tensor(opt.batchSize, digitClasses):zero():cuda()
         end
       else
         gradInput[1] = torch.Tensor(opt.batchSize, lengthClasses):zero()
         for i = 1,maxDigits do
-          gradInput[i+1] = torch.Tensor(opt.batchSize, 10):zero()
+          gradInput[i+1] = torch.Tensor(opt.batchSize, digitClasses):zero()
         end
       end
       
@@ -248,7 +249,7 @@ end
 local function test()
   model:evaluate()
   
-  local confusion = optim.ConfusionMatrix(10)
+  local confusion = optim.ConfusionMatrix(digitClasses)
   
   shuffle = torch.randperm(testSize)
   for t = 1, testSize - opt.batchSize, opt.batchSize do
@@ -283,7 +284,7 @@ local function test()
   print(confusion)
 end
 
-for e = 1, 1 do --opt.epochs do
+for e = 1, opt.epochs do
   if opt.train then train() end
   
   -- save/log current net

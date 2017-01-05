@@ -8,17 +8,28 @@ function ls(path) return sys.split(sys.ls(path),'\n') end -- alf ls() nice funct
 
 ----------------------------------------------------------------------
 
-local maxDigits = 6
+local maxDigits = 8
+local charOffset = -65 + 11
+local endLabel = string.byte("Z", 1) + charOffset + 1
 
 function digitsVec(num) 
-  local res = torch.Tensor(maxDigits+1):fill(11) -- class 10 is end-of-seq
+  local res = torch.Tensor(maxDigits+1):fill(endLabel) -- class 10 is end-of-seq
   local num = tostring(num)
   local idx = 1
-  for digit in num:gmatch('%d') do
-    res[idx]=tonumber(digit)
-    if res[idx] == 0 then
-      res[idx] = 10
+  for c in num:gmatch(".") do
+    local n = tonumber(c)
+    
+    -- setting correct class id for characters (only works with uppercase)
+    if n == nil then
+      c = string.upper(c)
+      res[idx] = string.byte(c, 1) + charOffset
+    else
+      res[idx] = n
+      if res[idx] == 0 then
+        res[idx] = 10
+      end
     end
+    
     idx = idx + 1
   end
   return torch.Tensor(res)
@@ -29,27 +40,27 @@ end
 -- Data params:
 
 local channels = 1
-local height = 54
-local width = 54
+local height = 95
+local width = 136
 
-local endLabel = 10
-local validationSize = 5000
+
+local validationSize = 200
 
 
 local train_dir = 'train/'
 local train_zip = './train.zip'
 local train_labels = './train_labels.txt'
-local train_url = "https://www.deep-ai.xyz/datasets/train.zip"
+local train_url = "http://www.terminet.xyz/datasets/train.zip"
 
 local extra_dir = 'extra/'
 local extra_zip = './extra.zip'
 local extra_labels = './extra_labels.txt'
-local extra_url = "https://www.deep-ai.xyz/datasets/extra.zip"
+local extra_url = "http://www.terminet.xyz/datasets/extra.zip"
 
 local test_dir = 'test/'
 local test_zip = './test.zip'
 local test_labels = './test_labels.txt'
-local test_url = "https://www.deep-ai.xyz/datasets/test.zip"
+local test_url = "http://www.terminet.xyz/datasets/test.zip"
 
 local trainSetPath = 'train.t7'
 local validSetPath = 'validation.t7'

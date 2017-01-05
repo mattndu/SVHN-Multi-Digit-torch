@@ -20,9 +20,12 @@ cmd:option('-score', false, 'score patch => crop the number')
 cmd:text()
 opt = cmd:parse(arg or {})
 
-local lengthClasses = 7
+local lengthClasses = 10
 local maxDigits = lengthClasses - 2 -- class 7 is "> maxDigits"
-local digitClasses = 10
+local digitClasses = 36
+local width = 136
+local height = 95
+local charOffset = 65 - 11
 
 local model = torch.load(opt.load)
 
@@ -34,9 +37,9 @@ if opt.score then
   input = image.scale(input, 54, 54)
   input = nn.Reshape(1,54,54):forward(input)
 end
-image.save('/home/itaic/TermiNet/score_parsing/SVHN/data/test.png', input[1])
+--image.save('/orpix/research/SVHN-Multi-Digit-torch/data/test.png', input[1])
 input:add(-input:mean())
-input = nn.Reshape(1,54,54):forward(input)
+input = nn.Reshape(1,width,height):forward(input)
 input = input:cuda()
 local output = model:forward(input)
 
@@ -68,9 +71,16 @@ for i = 1, lengthClasses do
 end
 
 local _maxProbs, _maxIdx = torch.max(output[1], 2)
-local result = 0
+local result = ""
 for i = 1, _maxIdx[1][1]-1 do
-  result = result * 10 + number[i]
+  if number[i] == 10 then
+    result = result .. "0"
+  elseif number[i] > 10 then
+    asciiCode = number[i] + charOffset
+    result = result .. string.char(asciiCode)
+  else
+    result = result .. tostring(number[i])
+  end
 end
 
 print(result)
